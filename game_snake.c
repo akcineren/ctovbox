@@ -5,9 +5,8 @@
 #include <time.h>
 #include <termios.h>
 #include <unistd.h>
-#include <fcntl.h>
-#include <string.h>
-#include <pthread.h>
+#include <fcntl.h>  // Required for fcntl, F_GETFL, F_SETFL, and O_NONBLOCK
+#include <string.h> // For string comparison
 
 #define ROWS 15
 #define COLS 15
@@ -17,21 +16,16 @@ typedef struct
     int x, y;
 } Point;
 
-// Global Variables
 char **grid;
-Point snake[ROWS * COLS];
-int snake_length = 1;
+Point snake[ROWS * COLS]; // Maximum possible length
+int snake_length = 1;     // Initial length of the snake
 Point bait;
 bool running = true;
-bool exit_game = false;
-char last_direction = 'd';
-char input_direction = 'd'; // Thread-safe input variable
+bool exit_game = false;    // Global exit flag
+char last_direction = 'd'; // Default direction
 int score = 0;
 
-pthread_t input_thread;
-pthread_mutex_t direction_lock;
-
-// Function Prototypes
+// Function prototypes
 void initialize_grid();
 void place_bait();
 void move_snake();
@@ -43,29 +37,24 @@ void update_grid();
 bool check_collision(Point next);
 bool is_opposite_direction(char new_direction);
 bool play_again_prompt();
-void *input_handler(void *arg);
 
 int main()
 {
-    // Setup signal handlers
+    // Setup signal handlers for SIGUSR1, SIGINT, and SIGTERM
     signal(SIGUSR1, handle_signal);
     signal(SIGINT, handle_signal);
     signal(SIGTERM, handle_signal);
 
-    // Initialize mutex and start input thread
-    pthread_mutex_init(&direction_lock, NULL);
-    pthread_create(&input_thread, NULL, input_handler, NULL);
-
     while (!exit_game)
     {
+        // Initialize grid and game state
         initialize_grid();
-        snake[0] = (Point){ROWS / 2, COLS / 2};
+        snake[0] = (Point){ROWS / 2, COLS / 2}; // Snake starts in the center
         grid[snake[0].x][snake[0].y] = 'O';
         place_bait();
 
         running = true;
         last_direction = 'd';
-        input_direction = 'd';
         score = 0;
         snake_length = 1;
 
@@ -73,39 +62,47 @@ int main()
         {
             render();
 
-            // Update direction from thread-safe input variable
-            pthread_mutex_lock(&direction_lock);
-            last_direction = input_direction;
-            pthread_mutex_unlock(&direction_lock);
+            if (kbhit())
+            {
+                char input = getchar();
+                if (input == 'q')
+                {
+                    // Simulate a kill signal using SIGUSR1
+                    raise(SIGUSR1);
+                }
+                else if (input == 'w' || input == 'a' || input == 's' || input == 'd')
+                {
+                    if (!is_opposite_direction(input))
+                    {
+                        last_direction = input; // Update direction
+                    }
+                }
+            }
 
             move_snake();
-            usleep(200000);
+            usleep(200000); // Smooth animation
         }
 
         cleanup();
 
         if (exit_game)
         {
-            break;
+            break; // Exit the entire game
         }
 
         printf("\nGame Over! Final Score: %d\n", score);
 
         if (!play_again_prompt())
         {
-            break;
+            break; // Return to the main menu
         }
     }
 
     printf("\nExiting the game...\n");
-
-    // Cleanup thread and mutex
-    pthread_join(input_thread, NULL);
-    pthread_mutex_destroy(&direction_lock);
-
     return 0;
 }
 
+// Initialize the game grid
 void initialize_grid()
 {
     grid = (char **)malloc(ROWS * sizeof(char *));
@@ -119,6 +116,7 @@ void initialize_grid()
     }
 }
 
+// Place bait at a random position
 void place_bait()
 {
     srand(time(NULL));
@@ -130,9 +128,10 @@ void place_bait()
     grid[bait.x][bait.y] = 'X';
 }
 
+// Handle movement of the snake
 void move_snake()
 {
-    Point next = snake[0];
+    Point next = snake[0]; // Current head position
 
     if (last_direction == 'w')
         next.x--;
@@ -143,20 +142,23 @@ void move_snake()
     else if (last_direction == 'd')
         next.y++;
 
+    // Check for collisions
     if (check_collision(next))
     {
         running = false;
         return;
     }
 
+    // Check if the snake eats the bait
     if (next.x == bait.x && next.y == bait.y)
     {
-        score += 10;
+        score += 10; // Increase score
         snake[snake_length] = snake[snake_length - 1];
         snake_length++;
-        place_bait();
+        place_bait(); // New bait
     }
 
+    // Move the snake's body
     for (int i = snake_length - 1; i > 0; i--)
     {
         snake[i] = snake[i - 1];
@@ -166,9 +168,10 @@ void move_snake()
     update_grid();
 }
 
+// Render the game grid
 void render()
 {
-    printf("\033[H\033[J");
+    printf("\033[H\033[J"); // Clear the screen
     printf("Score: %d\n\n", score);
     for (int i = 0; i < ROWS; i++)
     {
@@ -180,6 +183,7 @@ void render()
     }
 }
 
+// Update the game grid based on snake state
 void update_grid()
 {
     for (int i = 0; i < ROWS; i++)
@@ -206,6 +210,7 @@ void update_grid()
     }
 }
 
+// Check for collisions with walls or the snake's body
 bool check_collision(Point next)
 {
     if (next.x < 0 || next.x >= ROWS || next.y < 0 || next.y >= COLS)
@@ -224,15 +229,17 @@ bool check_collision(Point next)
     return false;
 }
 
+// Handle signals like SIGUSR1, SIGINT, or SIGTERM
 void handle_signal(int signal)
 {
     if (signal == SIGUSR1 || signal == SIGINT || signal == SIGTERM)
     {
         running = false;
-        exit_game = true;
+        exit_game = true; // Terminate the entire game
     }
 }
 
+// Free memory allocated for the game grid
 void cleanup()
 {
     for (int i = 0; i < ROWS; i++)
@@ -242,6 +249,7 @@ void cleanup()
     free(grid);
 }
 
+// Check for keyboard input without blocking
 int kbhit()
 {
     struct termios oldt, newt;
@@ -268,6 +276,7 @@ int kbhit()
     return 0;
 }
 
+// Check if the new direction is opposite to the current direction
 bool is_opposite_direction(char new_direction)
 {
     return (last_direction == 'w' && new_direction == 's') ||
@@ -276,6 +285,7 @@ bool is_opposite_direction(char new_direction)
            (last_direction == 'd' && new_direction == 'a');
 }
 
+// Prompt the user to play again or exit to the main menu
 bool play_again_prompt()
 {
     printf("\nDo you want to play again? (a: Yes, d: No)\n");
@@ -295,30 +305,4 @@ bool play_again_prompt()
             }
         }
     }
-}
-
-void *input_handler(void *arg)
-{
-    while (!exit_game)
-    {
-        if (kbhit())
-        {
-            char input = getchar();
-            pthread_mutex_lock(&direction_lock);
-            if (input == 'q')
-            {
-                raise(SIGUSR1);
-            }
-            else if (input == 'w' || input == 'a' || input == 's' || input == 'd')
-            {
-                if (!is_opposite_direction(input))
-                {
-                    input_direction = input;
-                }
-            }
-            pthread_mutex_unlock(&direction_lock);
-        }
-        usleep(50000);
-    }
-    return NULL;
 }
