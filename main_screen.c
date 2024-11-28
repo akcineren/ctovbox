@@ -23,7 +23,6 @@ void handle_signal(int sig);
 void handle_child_exit(int sig);
 void configure_terminal();
 void restore_terminal();
-
 int main()
 {
     struct sigaction sa;
@@ -52,6 +51,7 @@ int main()
     while (!exit_flag)
     {
         display_main_screen();
+
         char input = getchar();
 
         if (input == 'w')
@@ -69,6 +69,9 @@ int main()
             pid_t pid = fork();
             if (pid == 0)
             {
+                // Restore terminal settings for the game
+                restore_terminal();
+
                 // Child process: launch the game
                 char game_path[256];
                 snprintf(game_path, sizeof(game_path), "./%s", games[current_game]);
@@ -79,7 +82,10 @@ int main()
             else if (pid > 0)
             {
                 // Parent process: wait for the game to finish
-                pause(); // Wait until the game sends SIGCHLD
+                waitpid(pid, NULL, 0);
+
+                // Reconfigure terminal after game exits
+                configure_terminal();
             }
             else
             {
@@ -102,6 +108,14 @@ int main()
 
     restore_terminal(); // Restore terminal settings
     return 0;
+}
+
+// Handle SIGCHLD to detect when a child process (game) exits
+void handle_child_exit(int sig)
+{
+    int status;
+    waitpid(-1, &status, WNOHANG); // Wait for the child process to exit without blocking
+    printf("\nGame ended. Returning to main menu...\n");
 }
 
 // Scan for game executables in the given directory
@@ -134,13 +148,15 @@ void scan_games(const char *path)
     }
 }
 
-// Display the main menu
 void display_main_screen()
 {
-    system("clear");
+    // Move cursor to the top-left corner
+    printf("\033[H\033[J");
+
     printf("=== Video Game Console ===\n");
     printf("Use 'w' and 's' to navigate, 'Enter' to start, 'q' to quit.\n");
     printf("\n");
+
     for (int i = 0; i < game_count; i++)
     {
         if (i == current_game)
@@ -153,20 +169,11 @@ void display_main_screen()
         }
     }
 }
-
 // Handle SIGINT and SIGTERM for graceful exit
 void handle_signal(int sig)
 {
     printf("\nReceived signal %d. Exiting gracefully...\n", sig);
     exit_flag = true;
-}
-
-// Handle SIGCHLD to detect when a child process (game) exits
-void handle_child_exit(int sig)
-{
-    int status;
-    wait(&status); // Wait for the child process to exit
-    printf("\nGame ended. Returning to main menu...\n");
 }
 
 // Configure terminal for non-canonical input
