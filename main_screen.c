@@ -138,7 +138,8 @@ void handle_child_exit(int sig)
         {
             if (child_processes[i] == pid)
             {
-                child_processes[i] = 0; // Mark this process as terminated
+                child_processes[i] = 0;         // Mark this process as terminated
+                log_event("child killed", pid); // Log child termination
                 break;
             }
         }
@@ -235,7 +236,6 @@ void restore_terminal()
     tcsetattr(STDIN_FILENO, TCSANOW, &original_tio);
 }
 
-// Terminate all child processes
 void terminate_all_children()
 {
     for (int i = 0; i < child_count; i++)
@@ -244,19 +244,34 @@ void terminate_all_children()
         {
             printf("Terminating child process (PID %d)...\n", child_processes[i]);
             kill(child_processes[i], SIGTERM);
+            log_event("child killed", child_processes[i]); // Log child termination
         }
     }
 }
 
-// Register a child process
 void register_child(pid_t pid)
 {
     if (child_count < MAX_CHILDREN)
     {
         child_processes[child_count++] = pid;
+        log_event("child forked", pid); // Log child creation
     }
     else
     {
         fprintf(stderr, "Too many child processes to track!\n");
+    }
+}
+
+void log_event(const char *message, pid_t pid)
+{
+    FILE *log_file = fopen("process_log.txt", "a");
+    if (log_file != NULL)
+    {
+        fprintf(log_file, "%s %d\n", message, pid);
+        fclose(log_file);
+    }
+    else
+    {
+        perror("Failed to open log file");
     }
 }
