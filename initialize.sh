@@ -1,13 +1,9 @@
 #!/bin/bash
+# initialize.sh - Creates the storage_vgc.img file
 
-IMAGE_FILE="storage_vgc.img"
+IMG_FILE="storage_vgc.img"
 
-echo "Initializing disk image..."
-if [ -f "$IMAGE_FILE" ]; then
-    echo "Disk image exists. Overriding..."
-    rm -f "$IMAGE_FILE"
-fi
-
-dd if=/dev/zero of=$IMAGE_FILE bs=1M count=100
-mkfs.ext4 $IMAGE_FILE
-echo "Disk image initialized: $IMAGE_FILE"
+# Create or overwrite the disk image
+echo "Initializing disk image: $IMG_FILE"
+dd if=/dev/zero of=$IMG_FILE bs=1M count=64 status=progress
+echo "Disk image $IMG_FILE created."
