@@ -1,24 +1,30 @@
 #!/bin/bash
+# startup.sh - Mount and prepare the virtual disk
 
-IMAGE_FILE="storage_vgc.img"
-MOUNT_DIR="mount"
-DEVICE_FILE="device_file"
-SYMLINK_FILE="<device-file>"
+IMG_FILE="storage_vgc.img"
+DEVICE="/dev/loop0"
+SYMLINK="./<device-file>"
+MOUNT_DIR="./mount"
 
-echo "Starting up..."
+# Check and create mount directory if not exists
 if [ ! -d "$MOUNT_DIR" ]; then
-    echo "Mount directory does not exist. Creating..."
-    mkdir $MOUNT_DIR
+    mkdir -p "$MOUNT_DIR"
+    echo "Mount directory $MOUNT_DIR created."
 fi
 
-if [ ! -e "$IMAGE_FILE" ]; then
-    echo "Disk image not found. Run initialize.sh first."
-    exit 1
+# Attach image to loop device
+losetup $DEVICE $IMG_FILE || { echo "Failed to attach image to loop device."; exit 1; }
+
+# Create filesystem on the image (only if it doesn't already exist)
+if [ "$(blkid -o value -s TYPE $DEVICE 2>/dev/null)" == "" ]; then
+    mkfs.ext4 $DEVICE || { echo "Failed to format loop device."; exit 1; }
+    echo "Filesystem created on $DEVICE."
 fi
 
-LOOP_DEVICE=$(losetup -f)
-losetup $LOOP_DEVICE $IMAGE_FILE
-ln -s $LOOP_DEVICE $SYMLINK_FILE
-mount $LOOP_DEVICE $MOUNT_DIR
+# Mount the image
+mount $DEVICE $MOUNT_DIR || { echo "Failed to mount image."; exit 1; }
+echo "Image mounted on $MOUNT_DIR."
 
-echo "Image mounted and ready at $MOUNT_DIR"
+# Create a symbolic link to the device file
+ln -sf $DEVICE $SYMLINK
+echo "Symbolic link $SYMLINK created."
