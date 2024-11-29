@@ -79,23 +79,25 @@ int main()
             pid_t pid = fork();
             if (pid == 0)
             {
-                // Child process: Launch game_snake
-                execlp("./game_snake", "game_snake", NULL);
-                perror("Failed to launch game_snake");
+                // Child process: Launch the selected game
+                char game_path[256];
+                snprintf(game_path, sizeof(game_path), "./%s", games[current_game]); // Construct the path dynamically
+                execlp(game_path, games[current_game], NULL);
+                perror("Failed to launch the selected game");
                 exit(1);
             }
             else if (pid > 0)
             {
-                // Parent process: Wait for game_snake to exit
+                // Parent process: Wait for the selected game to exit
                 int status;
                 waitpid(pid, &status, 0); // Wait for the child to terminate
                 if (WIFEXITED(status))
                 {
-                    printf("\nGame exited gracefully with status %d.\n", WEXITSTATUS(status));
+                    printf("\nGame '%s' exited gracefully with status %d.\n", games[current_game], WEXITSTATUS(status));
                 }
                 else if (WIFSIGNALED(status))
                 {
-                    printf("\nGame terminated by signal %d.\n", WTERMSIG(status));
+                    printf("\nGame '%s' terminated by signal %d.\n", games[current_game], WTERMSIG(status));
                 }
             }
             else
