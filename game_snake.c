@@ -66,16 +66,20 @@ int main()
 
             if (kbhit())
             {
-                char input = getchar();
-                if (input == 'q')
+                char current_input = getchar();
+                if (current_input != last_processed_input) // Check if it's a new key press
                 {
-                    raise(SIGUSR1); // Exit the game
-                }
-                else if ((input == 'w' || input == 'a' || input == 's' || input == 'd') &&
-                         input != last_processed_input && !is_opposite_direction(input))
-                {
-                    last_direction = input;       // Update direction
-                    last_processed_input = input; // Track this input
+                    last_processed_input = current_input; // Update the last processed input
+
+                    if (current_input == 'q')
+                    {
+                        raise(SIGUSR1); // Exit the game
+                    }
+                    else if ((current_input == 'w' || current_input == 'a' || current_input == 's' || current_input == 'd') &&
+                             !is_opposite_direction(current_input))
+                    {
+                        last_direction = current_input; // Update direction
+                    }
                 }
             }
 
