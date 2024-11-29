@@ -60,10 +60,6 @@ int main()
 
         char input = '\0';                // To store the current input
         char last_processed_input = '\0'; // Track the last processed input
-        char input = '\0';                // To store the current input
-        char last_processed_input = '\0'; // Track the last processed input
-        char input = '\0';                // To store the current input
-        char last_processed_input = '\0'; // Track the last processed input
 
         while (running && !exit_game)
         {
@@ -71,7 +67,7 @@ int main()
 
             if (kbhit())
             {
-                char current_input = getchar();            // Fetch current input
+                char current_input = getchar();
                 if (current_input != last_processed_input) // Check if it's a new key press
                 {
                     last_processed_input = current_input; // Update the last processed input
