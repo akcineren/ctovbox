@@ -1,29 +1,24 @@
 #!/bin/bash
 
-# Variables
-IMG_NAME="storage_vgc.img"
+IMAGE_FILE="storage_vgc.img"
 MOUNT_DIR="mount"
-SYMLINK_NAME="<device-file>"
+DEVICE_FILE="device_file"
+SYMLINK_FILE="<device-file>"
 
-# Create mount directory if it doesn't exist
+echo "Starting up..."
 if [ ! -d "$MOUNT_DIR" ]; then
-    echo "Creating mount directory..."
-    mkdir "$MOUNT_DIR"
+    echo "Mount directory does not exist. Creating..."
+    mkdir $MOUNT_DIR
 fi
 
-# Attach the image to an available loop device
-LOOP_DEVICE=$(sudo losetup -f --show $IMG_NAME)
-
-# Create filesystem on the image if not already done
-if ! sudo file -s $LOOP_DEVICE | grep -q "ext4"; then
-    echo "Creating filesystem on the image..."
-    sudo mkfs.ext4 $LOOP_DEVICE
+if [ ! -e "$IMAGE_FILE" ]; then
+    echo "Disk image not found. Run initialize.sh first."
+    exit 1
 fi
 
-# Mount the image
-sudo mount $LOOP_DEVICE $MOUNT_DIR
+LOOP_DEVICE=$(losetup -f)
+losetup $LOOP_DEVICE $IMAGE_FILE
+ln -s $LOOP_DEVICE $SYMLINK_FILE
+mount $LOOP_DEVICE $MOUNT_DIR
 
-# Create a symbolic link
-ln -sf $LOOP_DEVICE $SYMLINK_NAME
-
-echo "Disk image $IMG_NAME is mounted as $LOOP_DEVICE and ready to use."
+echo "Image mounted and ready at $MOUNT_DIR"

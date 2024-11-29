@@ -1,18 +1,17 @@
 #!/bin/bash
 
-# Variables
-IMG_NAME="storage_vgc.img"
+IMAGE_FILE="storage_vgc.img"
+MOUNT_DIR="mount"
 
-# Run terminate.sh first
-echo "Terminating resources..."
+echo "Purging..."
 ./terminate.sh
 
-# Remove the disk image
-if [ -f "$IMG_NAME" ]; then
-    echo "Removing disk image $IMG_NAME..."
-    rm -f $IMG_NAME
-else
-    echo "No disk image found."
+if [ -f "$IMAGE_FILE" ]; then
+    rm -f $IMAGE_FILE
+    echo "Removed $IMAGE_FILE"
 fi
 
-echo "All resources have been purged."
+if [ -d "$MOUNT_DIR" ]; then
+    rm -rf $MOUNT_DIR
+    echo "Removed $MOUNT_DIR"
+fi

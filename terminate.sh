@@ -1,28 +1,17 @@
 #!/bin/bash
 
-# Variables
 MOUNT_DIR="mount"
-DEVICE_FILE="/dev/loop0"
-SYMLINK_NAME="<device-file>"
+SYMLINK_FILE="<device-file>"
 
-# Unmount the image
-if mount | grep -q "$MOUNT_DIR"; then
-    echo "Unmounting the image..."
-    sudo umount $MOUNT_DIR
-else
-    echo "No image is mounted."
+echo "Terminating..."
+if mountpoint -q $MOUNT_DIR; then
+    umount $MOUNT_DIR
+    echo "Unmounted $MOUNT_DIR"
 fi
 
-# Detach the loop device
-if losetup -l | grep -q "$DEVICE_FILE"; then
-    echo "Detaching the loop device..."
-    sudo losetup -d $DEVICE_FILE
+if [ -L "$SYMLINK_FILE" ]; then
+    LOOP_DEVICE=$(readlink -f $SYMLINK_FILE)
+    losetup -d $LOOP_DEVICE
+    rm -f $SYMLINK_FILE
+    echo "Device file detached and symbolic link removed"
 fi
-
-# Remove the symbolic link
-if [ -L "$SYMLINK_NAME" ]; then
-    echo "Removing symbolic link..."
-    rm -f $SYMLINK_NAME
-fi
-
-echo "Disk image is safely unplugged."
