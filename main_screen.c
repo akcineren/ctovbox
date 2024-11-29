@@ -88,18 +88,17 @@ int main()
             }
             else if (pid > 0)
             {
-                // Parent process: Wait for the selected game to exit
-                int status;
-                waitpid(pid, &status, 0); // Wait for the child to terminate
-                if (WIFEXITED(status))
+                // Parent process: Register the child and wait for it to terminate
+                register_child(pid);
+
+                // Do not block the main loop while waiting for child termination
+                while (waitpid(pid, NULL, WNOHANG) == 0)
                 {
-                    printf("\nGame '%s' exited gracefully with status %d.\n", games[current_game], WEXITSTATUS(status));
-                }
-                else if (WIFSIGNALED(status))
-                {
-                    printf("\nGame '%s' terminated by signal %d.\n", games[current_game], WTERMSIG(status));
+                    // Allow handling of signals and refreshing the main menu
+                    usleep(100000);
                 }
             }
+
             else
             {
                 perror("Failed to fork process");
@@ -124,14 +123,17 @@ int main()
     return 0;
 }
 
-// Handle SIGCHLD to detect when a child process (game) exits
 void handle_child_exit(int sig)
 {
     int status;
-    pid_t pid = waitpid(-1, &status, WNOHANG);
-    if (pid > 0)
+    pid_t pid;
+
+    // Loop to reap all zombie processes
+    while ((pid = waitpid(-1, &status, WNOHANG)) > 0)
     {
         printf("\nGame (PID %d) ended. Returning to main menu...\n", pid);
+
+        // Mark the terminated child process
         for (int i = 0; i < child_count; i++)
         {
             if (child_processes[i] == pid)
@@ -139,6 +141,16 @@ void handle_child_exit(int sig)
                 child_processes[i] = 0; // Mark this process as terminated
                 break;
             }
+        }
+
+        // Log game exit details
+        if (WIFEXITED(status))
+        {
+            printf("Game exited gracefully with status %d.\n", WEXITSTATUS(status));
+        }
+        else if (WIFSIGNALED(status))
+        {
+            printf("Game terminated by signal %d.\n", WTERMSIG(status));
         }
     }
 }
