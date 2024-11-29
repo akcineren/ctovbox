@@ -60,6 +60,7 @@ int main()
 
         char input = '\0';                // To store the current input
         char last_processed_input = '\0'; // Track the last processed input
+        char last_processed_input = '\0'; // Track the last processed input
         while (running && !exit_game)
         {
             render();
