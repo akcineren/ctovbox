@@ -25,6 +25,8 @@ bool exit_game = false;    // Global exit flag
 char last_direction = 'd'; // Default direction
 int score = 0;
 
+struct termios original_tio;
+
 // Function prototypes
 void initialize_grid();
 void place_bait();
@@ -32,11 +34,12 @@ void move_snake();
 void render();
 void handle_signal(int signal);
 void cleanup();
-int kbhit();
 void update_grid();
 bool check_collision(Point next);
 bool is_opposite_direction(char new_direction);
 bool play_again_prompt();
+void configure_terminal();
+void restore_terminal();
 
 int main()
 {
@@ -44,6 +47,9 @@ int main()
     signal(SIGUSR1, handle_signal);
     signal(SIGINT, handle_signal);
     signal(SIGTERM, handle_signal);
+
+    // Configure terminal for non-canonical input
+    configure_terminal();
 
     while (!exit_game)
     {
@@ -62,9 +68,11 @@ int main()
         {
             render();
 
-            if (kbhit())
+            // Read and process all available inputs
+            char input;
+            ssize_t bytes_read;
+            while ((bytes_read = read(STDIN_FILENO, &input, 1)) > 0)
             {
-                char input = getchar();
                 if (input == 'q')
                 {
                     // Simulate a kill signal using SIGUSR1
@@ -99,6 +107,7 @@ int main()
     }
 
     printf("\nExiting the game...\n");
+    restore_terminal(); // Restore terminal settings
     return 0;
 }
 
@@ -119,7 +128,7 @@ void initialize_grid()
 // Place bait at a random position
 void place_bait()
 {
-    srand(time(NULL));
+    srand(time(NULL) + snake_length); // Ensure different seed
     do
     {
         bait.x = rand() % ROWS;
@@ -153,9 +162,9 @@ void move_snake()
     if (next.x == bait.x && next.y == bait.y)
     {
         score += 10; // Increase score
-        snake[snake_length] = snake[snake_length - 1];
         snake_length++;
-        place_bait(); // New bait
+        snake[snake_length - 1] = snake[snake_length - 2]; // Extend the snake
+        place_bait();                                      // New bait
     }
 
     // Move the snake's body
@@ -249,33 +258,6 @@ void cleanup()
     free(grid);
 }
 
-// Check for keyboard input without blocking
-int kbhit()
-{
-    struct termios oldt, newt;
-    int ch, oldf;
-
-    tcgetattr(STDIN_FILENO, &oldt);
-    newt = oldt;
-    newt.c_lflag &= ~(ICANON | ECHO);
-    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
-    oldf = fcntl(STDIN_FILENO, F_GETFL, 0);
-    fcntl(STDIN_FILENO, F_SETFL, oldf | O_NONBLOCK);
-
-    ch = getchar();
-
-    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-    fcntl(STDIN_FILENO, F_SETFL, oldf);
-
-    if (ch != EOF)
-    {
-        ungetc(ch, stdin);
-        return 1;
-    }
-
-    return 0;
-}
-
 // Check if the new direction is opposite to the current direction
 bool is_opposite_direction(char new_direction)
 {
@@ -292,9 +274,9 @@ bool play_again_prompt()
     char choice;
     while (true)
     {
-        if (kbhit())
+        ssize_t bytes_read = read(STDIN_FILENO, &choice, 1);
+        if (bytes_read > 0)
         {
-            choice = getchar();
             if (choice == 'a')
             {
                 return true;
@@ -305,4 +287,31 @@ bool play_again_prompt()
             }
         }
     }
+}
+
+// Configure terminal for non-canonical input
+void configure_terminal()
+{
+    struct termios new_tio;
+    tcgetattr(STDIN_FILENO, &original_tio); // Get current terminal settings
+    new_tio = original_tio;
+
+    // Disable canonical mode and echo
+    new_tio.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &new_tio);
+
+    // Set stdin to non-blocking mode
+    int flags = fcntl(STDIN_FILENO, F_GETFL, 0);
+    fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK);
+}
+
+// Restore original terminal settings
+void restore_terminal()
+{
+    tcsetattr(STDIN_FILENO, TCSANOW, &original_tio);
+
+    // Restore stdin to blocking mode
+    int flags = fcntl(STDIN_FILENO, F_GETFL, 0);
+    flags &= ~O_NONBLOCK;
+    fcntl(STDIN_FILENO, F_SETFL, flags);
 }

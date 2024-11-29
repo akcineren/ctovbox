@@ -7,6 +7,7 @@
 #include <sys/wait.h>
 #include <termios.h>
 #include <stdbool.h>
+#include <fcntl.h>
 
 #define MAX_GAMES 100
 
@@ -23,17 +24,22 @@ void handle_signal(int sig);
 void handle_child_exit(int sig);
 void configure_terminal();
 void restore_terminal();
+
 int main()
 {
     struct sigaction sa;
 
     // Set up signal handler for SIGINT and SIGTERM
     sa.sa_handler = handle_signal;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
     sigaction(SIGINT, &sa, NULL);
     sigaction(SIGTERM, &sa, NULL);
 
     // Set up signal handler for SIGCHLD to detect game termination
     sa.sa_handler = handle_child_exit;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = SA_RESTART;
     sigaction(SIGCHLD, &sa, NULL);
 
     // Configure terminal for non-canonical mode
@@ -69,6 +75,10 @@ int main()
             pid_t pid = fork();
             if (pid == 0)
             {
+                // Child process: reset signal handlers to default
+                signal(SIGINT, SIG_DFL);
+                signal(SIGTERM, SIG_DFL);
+
                 // Restore terminal settings for the game
                 restore_terminal();
 
@@ -81,8 +91,19 @@ int main()
             }
             else if (pid > 0)
             {
+                // Parent process: ignore SIGINT and SIGTERM during wait
+                signal(SIGINT, SIG_IGN);
+                signal(SIGTERM, SIG_IGN);
+
                 // Parent process: wait for the game to finish
                 waitpid(pid, NULL, 0);
+
+                // Restore original signal handlers
+                sa.sa_handler = handle_signal;
+                sigemptyset(&sa.sa_mask);
+                sa.sa_flags = 0;
+                sigaction(SIGINT, &sa, NULL);
+                sigaction(SIGTERM, &sa, NULL);
 
                 // Reconfigure terminal after game exits
                 configure_terminal();
@@ -114,8 +135,13 @@ int main()
 void handle_child_exit(int sig)
 {
     int status;
-    waitpid(-1, &status, WNOHANG); // Wait for the child process to exit without blocking
-    printf("\nGame ended. Returning to main menu...\n");
+    pid_t pid;
+    // Use a loop to reap all dead child processes
+    while ((pid = waitpid(-1, &status, WNOHANG)) > 0)
+    {
+        // Child process has exited
+    }
+    // printf("\nGame ended. Returning to main menu...\n");
 }
 
 // Scan for game executables in the given directory
@@ -169,6 +195,7 @@ void display_main_screen()
         }
     }
 }
+
 // Handle SIGINT and SIGTERM for graceful exit
 void handle_signal(int sig)
 {
@@ -183,13 +210,22 @@ void configure_terminal()
     tcgetattr(STDIN_FILENO, &original_tio); // Get current terminal settings
     new_tio = original_tio;
 
-    // Disable canonical mode and echoing
+    // Disable canonical mode and echo
     new_tio.c_lflag &= ~(ICANON | ECHO);
     tcsetattr(STDIN_FILENO, TCSANOW, &new_tio);
+
+    // Set stdin to non-blocking mode
+    int flags = fcntl(STDIN_FILENO, F_GETFL, 0);
+    fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK);
 }
 
 // Restore original terminal settings
 void restore_terminal()
 {
     tcsetattr(STDIN_FILENO, TCSANOW, &original_tio);
+
+    // Restore stdin to blocking mode
+    int flags = fcntl(STDIN_FILENO, F_GETFL, 0);
+    flags &= ~O_NONBLOCK;
+    fcntl(STDIN_FILENO, F_SETFL, flags);
 }
