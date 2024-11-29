@@ -7,7 +7,6 @@
 #include <sys/wait.h>
 #include <termios.h>
 #include <stdbool.h>
-#include <fcntl.h>
 
 #define MAX_GAMES 100
 
@@ -141,7 +140,6 @@ void handle_child_exit(int sig)
     {
         // Child process has exited
     }
-    // printf("\nGame ended. Returning to main menu...\n");
 }
 
 // Scan for game executables in the given directory
@@ -214,9 +212,8 @@ void configure_terminal()
     new_tio.c_lflag &= ~(ICANON | ECHO);
     tcsetattr(STDIN_FILENO, TCSANOW, &new_tio);
 
-    // Set stdin to non-blocking mode
-    int flags = fcntl(STDIN_FILENO, F_GETFL, 0);
-    fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK);
+    // Do not set stdin to non-blocking mode
+    // We want getchar() to block until input is available
 }
 
 // Restore original terminal settings
@@ -224,8 +221,5 @@ void restore_terminal()
 {
     tcsetattr(STDIN_FILENO, TCSANOW, &original_tio);
 
-    // Restore stdin to blocking mode
-    int flags = fcntl(STDIN_FILENO, F_GETFL, 0);
-    flags &= ~O_NONBLOCK;
-    fcntl(STDIN_FILENO, F_SETFL, flags);
+    // No need to restore stdin flags since we didn't change them
 }
