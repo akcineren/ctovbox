@@ -1,9 +1,13 @@
 #!/bin/bash
-# initialize.sh - Creates the storage_vgc.img file
 
-IMG_FILE="storage_vgc.img"
+IMAGE="storage_vgc.img"
 
-# Create or overwrite the disk image
-echo "Initializing disk image: $IMG_FILE"
-dd if=/dev/zero of=$IMG_FILE bs=1M count=64 status=progress
-echo "Disk image $IMG_FILE created."
+echo "Initializing disk image..."
+if [ -f "$IMAGE" ]; then
+    echo "Disk image exists. Overwriting..."
+fi
+
+# Create a new image file (1GB size as an example)
+dd if=/dev/zero of=$IMAGE bs=1M count=1024
+
+echo "Disk image $IMAGE created successfully."
