@@ -234,11 +234,9 @@ void handle_signal(int signal)
 {
     if (signal == SIGUSR1 || signal == SIGINT || signal == SIGTERM)
     {
-        running = false;  // Stop the game loop
-        exit_game = true; // Indicate exit from the game
-        cleanup();        // Free allocated resources
+        running = false; // Stop the game loop
+        cleanup();       // Free allocated resources
         printf("\nGame received signal %d. Exiting...\n", signal);
-        exit(0); // Exit gracefully, notifying the parent process
     }
 }
 
