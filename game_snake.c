@@ -287,9 +287,12 @@ int kbhit()
     return 0;
 }
 
-// Check if the new direction is opposite to the current direction
 bool is_opposite_direction(char new_direction)
 {
+    if (new_direction == last_direction)
+    {
+        return true; // Ignore if the new direction is the same as the current one
+    }
     return (last_direction == 'w' && new_direction == 's') ||
            (last_direction == 's' && new_direction == 'w') ||
            (last_direction == 'a' && new_direction == 'd') ||
