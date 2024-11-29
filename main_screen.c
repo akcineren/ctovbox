@@ -7,14 +7,19 @@
 #include <sys/wait.h>
 #include <termios.h>
 #include <stdbool.h>
+#include <sys/types.h>
 
 #define MAX_GAMES 100
+#define MAX_CHILDREN 100
 
 char *games[MAX_GAMES];
 int game_count = 0;
 int current_game = 0;
 bool exit_flag = false;
 struct termios original_tio;
+
+pid_t child_processes[MAX_CHILDREN];
+int child_count = 0;
 
 // Function prototypes
 void scan_games(const char *path);
@@ -23,12 +28,17 @@ void handle_signal(int sig);
 void handle_child_exit(int sig);
 void configure_terminal();
 void restore_terminal();
+void terminate_all_children();
+void register_child(pid_t pid);
+
 int main()
 {
     struct sigaction sa;
 
     // Set up signal handler for SIGINT and SIGTERM
     sa.sa_handler = handle_signal;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
     sigaction(SIGINT, &sa, NULL);
     sigaction(SIGTERM, &sa, NULL);
 
@@ -81,7 +91,8 @@ int main()
             }
             else if (pid > 0)
             {
-                // Parent process: wait for the game to finish
+                // Parent process: register child and wait for the game to finish
+                register_child(pid);
                 waitpid(pid, NULL, 0);
 
                 // Reconfigure terminal after game exits
@@ -106,7 +117,8 @@ int main()
         free(games[i]);
     }
 
-    restore_terminal(); // Restore terminal settings
+    terminate_all_children(); // Ensure all children are terminated
+    restore_terminal();       // Restore terminal settings
     return 0;
 }
 
@@ -114,8 +126,19 @@ int main()
 void handle_child_exit(int sig)
 {
     int status;
-    waitpid(-1, &status, WNOHANG); // Wait for the child process to exit without blocking
-    printf("\nGame ended. Returning to main menu...\n");
+    pid_t pid = waitpid(-1, &status, WNOHANG);
+    if (pid > 0)
+    {
+        printf("\nGame (PID %d) ended. Returning to main menu...\n", pid);
+        for (int i = 0; i < child_count; i++)
+        {
+            if (child_processes[i] == pid)
+            {
+                child_processes[i] = 0; // Mark this process as terminated
+                break;
+            }
+        }
+    }
 }
 
 // Scan for game executables in the given directory
@@ -169,11 +192,15 @@ void display_main_screen()
         }
     }
 }
+
 // Handle SIGINT and SIGTERM for graceful exit
 void handle_signal(int sig)
 {
     printf("\nReceived signal %d. Exiting gracefully...\n", sig);
     exit_flag = true;
+    terminate_all_children(); // Terminate all child processes
+    restore_terminal();
+    exit(0); // Ensure immediate exit
 }
 
 // Configure terminal for non-canonical input
@@ -192,4 +219,30 @@ void configure_terminal()
 void restore_terminal()
 {
     tcsetattr(STDIN_FILENO, TCSANOW, &original_tio);
+}
+
+// Terminate all child processes
+void terminate_all_children()
+{
+    for (int i = 0; i < child_count; i++)
+    {
+        if (child_processes[i] > 0)
+        {
+            printf("Terminating child process (PID %d)...\n", child_processes[i]);
+            kill(child_processes[i], SIGTERM);
+        }
+    }
+}
+
+// Register a child process
+void register_child(pid_t pid)
+{
+    if (child_count < MAX_CHILDREN)
+    {
+        child_processes[child_count++] = pid;
+    }
+    else
+    {
+        fprintf(stderr, "Too many child processes to track!\n");
+    }
 }
