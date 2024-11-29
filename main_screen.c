@@ -80,10 +80,16 @@ int main()
         {
             printf("Launching %s...\n", games[current_game]);
 
+            // Ignore SIGINT while child is running
+            signal(SIGINT, SIG_IGN);
+
             pid_t pid = fork();
             if (pid == 0)
             {
-                // Child process: Launch the selected game
+                // Child process: Restore default SIGINT behavior
+                signal(SIGINT, SIG_DFL);
+
+                // Launch the selected game
                 char game_path[256];
                 snprintf(game_path, sizeof(game_path), "./%s", games[current_game]); // Construct the path dynamically
                 execlp(game_path, games[current_game], NULL);
@@ -101,15 +107,14 @@ int main()
                     // Allow handling of signals and refreshing the main menu
                     usleep(100000);
                 }
+
+                // Restore signal handler
+                signal(SIGINT, handle_signal);
             }
             else
             {
                 perror("Failed to fork process");
             }
-        }
-        else if (input == 'q') // Quit the main menu
-        {
-            exit_flag = true;
         }
     }
 
