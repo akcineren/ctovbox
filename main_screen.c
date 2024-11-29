@@ -91,7 +91,7 @@ int main()
 
                 // Launch the selected game
                 char game_path[256];
-                snprintf(game_path, sizeof(game_path), "./%s", games[current_game]); // Construct the path dynamically
+                snprintf(game_path, sizeof(game_path), "./%s", games[current_game]);
                 execlp(game_path, games[current_game], NULL);
                 perror("Failed to launch the selected game");
                 exit(1);
@@ -110,11 +110,22 @@ int main()
 
                 // Restore signal handler
                 signal(SIGINT, handle_signal);
+
+                // Reconfigure terminal settings after child exits
+                configure_terminal();
             }
             else
             {
                 perror("Failed to fork process");
             }
+        }
+        else if (input == 'q') // Quit the main menu
+        {
+            exit_flag = true;
+        }
+        if (exit_flag)
+        {
+            break;
         }
     }
 
