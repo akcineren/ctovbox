@@ -60,6 +60,8 @@ int main()
 
         char input = '\0';                // To store the current input
         char last_processed_input = '\0'; // Track the last processed input
+        char input = '\0';                // To store the current input
+        char last_processed_input = '\0'; // Track the last processed input
         while (running && !exit_game)
         {
             render();
@@ -80,6 +82,12 @@ int main()
                     {
                         last_direction = current_input; // Update direction
                     }
+                }
+
+                // Flush the input buffer to prevent processing repeated keys
+                while (kbhit())
+                {
+                    getchar(); // Consume remaining characters in the buffer
                 }
             }
 
