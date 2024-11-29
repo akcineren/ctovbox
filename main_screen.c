@@ -79,24 +79,24 @@ int main()
             pid_t pid = fork();
             if (pid == 0)
             {
-                // Restore terminal settings for the game
-                restore_terminal();
-
-                // Child process: launch the game
-                char game_path[256];
-                snprintf(game_path, sizeof(game_path), "./%s", games[current_game]);
-                execlp(game_path, games[current_game], NULL);
-                perror("Failed to launch game");
+                // Child process: Launch game_snake
+                execlp("./game_snake", "game_snake", NULL);
+                perror("Failed to launch game_snake");
                 exit(1);
             }
             else if (pid > 0)
             {
-                // Parent process: register child and wait for the game to finish
-                register_child(pid);
-                waitpid(pid, NULL, 0);
-
-                // Reconfigure terminal after game exits
-                configure_terminal();
+                // Parent process: Wait for game_snake to exit
+                int status;
+                waitpid(pid, &status, 0); // Wait for the child to terminate
+                if (WIFEXITED(status))
+                {
+                    printf("\nGame exited gracefully with status %d.\n", WEXITSTATUS(status));
+                }
+                else if (WIFSIGNALED(status))
+                {
+                    printf("\nGame terminated by signal %d.\n", WTERMSIG(status));
+                }
             }
             else
             {
