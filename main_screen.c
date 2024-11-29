@@ -30,6 +30,7 @@ void configure_terminal();
 void restore_terminal();
 void terminate_all_children();
 void register_child(pid_t pid);
+void log_event(const char *message, pid_t pid);
 
 int main()
 {
@@ -48,6 +49,9 @@ int main()
 
     // Configure terminal for non-canonical mode
     configure_terminal();
+
+    // Log the program's own PID
+    log_event("program started", getpid());
 
     // Scan for games in the current directory
     scan_games(".");
@@ -98,7 +102,6 @@ int main()
                     usleep(100000);
                 }
             }
-
             else
             {
                 perror("Failed to fork process");
