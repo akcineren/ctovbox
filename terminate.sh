@@ -1,21 +1,30 @@
 #!/bin/bash
 
-# Unmount the image
-umount ./mount
+# terminate.sh
+# This script unmounts the disk image and cleans up the loop device and symbolic link.
 
-# Get the loop device
-if [ -f loop_device.info ]; then
-    LOOP_DEVICE=$(cat loop_device.info)
+IMAGE="storage_vgc.img"
+MOUNT_DIR="mount"
+DEVICE_LINK="device-file"
 
-    # Detach the loop device
-    losetup -d $LOOP_DEVICE
+# Find the loop device associated with the image
+LOOP_DEVICE=$(losetup -j "$IMAGE" | cut -d':' -f1)
 
-    # Remove the loop_device.info file
-    rm -f loop_device.info
-else
-    echo "Error: loop_device.info not found."
+if [ -z "$LOOP_DEVICE" ]; then
+    echo "No loop device found for '$IMAGE'."
     exit 1
 fi
 
+# Unmount the mount directory
+sudo umount "$MOUNT_DIR"
+echo "Unmounted '$MOUNT_DIR'."
+
+# Detach the loop device
+sudo losetup -d "$LOOP_DEVICE"
+echo "Loop device '$LOOP_DEVICE' detached."
+
 # Remove the symbolic link
-rm -f ./<device-file>
+rm -f "$DEVICE_LINK"
+echo "Symbolic link '$DEVICE_LINK' removed."
+
+exit 0

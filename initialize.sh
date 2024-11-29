@@ -1,35 +1,24 @@
 #!/bin/bash
 
-# Initialize the storage image
-# Remove existing image file if it exists
-if [ -f storage_vgc.img ]; then
-    rm -f storage_vgc.img
+# initialize.sh
+# This script creates a new disk image file 'storage_vgc.img'.
+# If the image already exists, it will override the previous one.
+
+IMAGE="storage_vgc.img"
+IMAGE_SIZE="100M"  # Adjust the size as needed
+
+# Remove existing image if it exists
+if [ -f "$IMAGE" ]; then
+    echo "Image file '$IMAGE' exists. Overriding it."
+    rm -f "$IMAGE"
 fi
 
-# Create a 100MB image file
-dd if=/dev/zero of=storage_vgc.img bs=1M count=100
+# Create a new empty disk image
+dd if=/dev/zero of="$IMAGE" bs=1M count=100
 
-# Format it with ext4 filesystem
-mkfs.ext4 storage_vgc.img
+# Create a filesystem on the image (e.g., ext4)
+mkfs.ext4 "$IMAGE"
 
-# Temporarily mount the image to create directories
-# Create a temporary mount point
-mkdir -p temp_mount
+echo "Disk image '$IMAGE' created and formatted."
 
-# Attach the image to a loop device
-LOOP_DEVICE=$(losetup -f)
-losetup $LOOP_DEVICE storage_vgc.img
-
-# Mount the loop device
-mount $LOOP_DEVICE temp_mount
-
-# Create directories bin and src inside the image
-mkdir temp_mount/bin
-mkdir temp_mount/src
-
-# Unmount and detach loop device
-umount temp_mount
-losetup -d $LOOP_DEVICE
-
-# Remove temporary mount point
-rmdir temp_mount
+exit 0
