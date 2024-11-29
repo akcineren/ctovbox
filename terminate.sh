@@ -1,17 +1,21 @@
 #!/bin/bash
 
-MOUNT_DIR="mount"
-SYMLINK_FILE="<device-file>"
+# Unmount the image
+umount ./mount
 
-echo "Terminating..."
-if mountpoint -q $MOUNT_DIR; then
-    umount $MOUNT_DIR
-    echo "Unmounted $MOUNT_DIR"
-fi
+# Get the loop device
+if [ -f loop_device.info ]; then
+    LOOP_DEVICE=$(cat loop_device.info)
 
-if [ -L "$SYMLINK_FILE" ]; then
-    LOOP_DEVICE=$(readlink -f $SYMLINK_FILE)
+    # Detach the loop device
     losetup -d $LOOP_DEVICE
-    rm -f $SYMLINK_FILE
-    echo "Device file detached and symbolic link removed"
+
+    # Remove the loop_device.info file
+    rm -f loop_device.info
+else
+    echo "Error: loop_device.info not found."
+    exit 1
 fi
+
+# Remove the symbolic link
+rm -f ./<device-file>

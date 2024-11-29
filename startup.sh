@@ -1,33 +1,25 @@
 #!/bin/bash
 
-IMAGE="storage_vgc.img"
-DEVICE="/dev/loop0"
-SYMLINK="<device-file>"
-MOUNT_DIR="mount"
-
-echo "Starting up..."
-
-# Create mount directory if not exists
-if [ ! -d "$MOUNT_DIR" ]; then
-    echo "Mount directory does not exist. Creating..."
-    mkdir $MOUNT_DIR
-fi
-
-# Attach loop device
-losetup $DEVICE $IMAGE
-if [ $? -ne 0 ]; then
-    echo "Error attaching device file to image."
+# Check if storage_vgc.img exists
+if [ ! -f storage_vgc.img ]; then
+    echo "Error: storage_vgc.img not found. Please run initialize.sh first."
     exit 1
 fi
 
-# Mount the image
-mount $DEVICE $MOUNT_DIR
-if [ $? -ne 0 ]; then
-    echo "Error mounting the disk image."
-    exit 1
+# Create mount directory if it doesn't exist
+if [ ! -d mount ]; then
+    mkdir mount
 fi
 
-# Create symbolic link
-ln -sf $DEVICE $SYMLINK
+# Attach storage_vgc.img to a loop device
+LOOP_DEVICE=$(losetup -f)
+losetup $LOOP_DEVICE storage_vgc.img
 
-echo "Disk image mounted and ready to use."
+# Save loop device info to a file
+echo $LOOP_DEVICE > loop_device.info
+
+# Create a symbolic link to the device file in our directory
+ln -s $LOOP_DEVICE ./<device-file>
+
+# Mount the loop device to mount directory
+mount $LOOP_DEVICE ./mount
