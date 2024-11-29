@@ -251,7 +251,6 @@ void cleanup()
     free(grid);
 }
 
-// Check for keyboard input without blocking
 int kbhit()
 {
     struct termios oldt, newt;
@@ -287,10 +286,9 @@ bool is_opposite_direction(char new_direction)
            (last_direction == 'd' && new_direction == 'a');
 }
 
-// Prompt the user to play again or exit to the main menu
 bool play_again_prompt()
 {
-    printf("\nDo you want to play again? (a: Yes, d: No)\n");
+    printf("\nDo you want to play again? (a: Yes, d: No, q: Quit)\n");
     char choice;
     while (true)
     {
@@ -299,10 +297,15 @@ bool play_again_prompt()
             choice = getchar();
             if (choice == 'a')
             {
-                return true;
+                return true; // Replay
             }
             else if (choice == 'd')
             {
+                return false; // End game loop
+            }
+            else if (choice == 'q')
+            {
+                exit_game = true; // Exit the game entirely
                 return false;
             }
         }
