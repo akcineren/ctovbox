@@ -58,30 +58,25 @@ int main()
         score = 0;
         snake_length = 1;
 
-        char input = '\0'; // To store the current input
+        char input = '\0';                // To store the current input
+        char last_processed_input = '\0'; // Track the last processed input
         while (running && !exit_game)
         {
             render();
 
-            // Check for keyboard input
             if (kbhit())
             {
-                char temp = getchar(); // Get the latest input
-                if (temp == 'q')
+                char input = getchar();
+                if (input == 'q')
                 {
                     raise(SIGUSR1); // Exit the game
                 }
-                else if ((temp == 'w' || temp == 'a' || temp == 's' || temp == 'd') && !is_opposite_direction(temp))
+                else if ((input == 'w' || input == 'a' || input == 's' || input == 'd') &&
+                         input != last_processed_input && !is_opposite_direction(input))
                 {
-                    input = temp; // Store the input for this iteration
+                    last_direction = input;       // Update direction
+                    last_processed_input = input; // Track this input
                 }
-            }
-
-            // Only update direction if a valid input was received
-            if (input != '\0')
-            {
-                last_direction = input; // Update direction
-                input = '\0';           // Clear input after processing
             }
 
             move_snake();
