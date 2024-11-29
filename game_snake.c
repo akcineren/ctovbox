@@ -243,11 +243,10 @@ void handle_signal(int signal)
 {
     if (signal == SIGUSR1 || signal == SIGINT || signal == SIGTERM)
     {
-        running = false;  // Stop the game loop
-        exit_game = true; // Indicate exit from the game
-        cleanup();        // Free allocated resources
-        printf("\nGame received signal %d. Exiting...\n", signal);
-        exit(0); // Exit gracefully with a success code
+        running = false; // Stop the game loop
+        cleanup();       // Free allocated resources
+        printf("\nGame received signal %d. Returning to main menu...\n", signal);
+        exit(2); // Use a specific exit code to indicate signal termination
     }
 }
 
