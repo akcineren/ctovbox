@@ -6,12 +6,6 @@ MOUNT_DIR="mount"
 DEVICE_FILE="/dev/loop0"
 SYMLINK_NAME="<device-file>"
 
-# Detach loop device if it's already in use
-if losetup -l | grep -q "$DEVICE_FILE"; then
-    echo "Detaching existing loop device..."
-    sudo losetup -d $DEVICE_FILE
-fi
-
 # Create mount directory if it doesn't exist
 if [ ! -d "$MOUNT_DIR" ]; then
     echo "Creating mount directory..."
