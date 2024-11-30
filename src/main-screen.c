@@ -205,8 +205,8 @@ void handle_signal(int sig)
     exit_flag = true;
     terminate_all_children();
     restore_terminal();
+    exit(0);
 }
-
 void safe_exit()
 {
     restore_terminal();
@@ -261,10 +261,6 @@ void register_child(pid_t pid)
     {
         child_processes[child_count++] = pid;
         log_event("child forked", pid);
-    }
-    else
-    {
-        fprintf(stderr, "Too many child processes to track\n");
     }
 }
 

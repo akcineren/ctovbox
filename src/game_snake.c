@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
+#include <sys/ioctl.h>
 
 #define ROWS 15
 #define COLS 15
@@ -25,6 +26,8 @@ char last_direction = 'd';
 bool exit_game = false;
 int score = 0;
 
+struct termios original_tio; // Global variable for terminal settings
+
 void initialize_grid();
 void place_bait();
 void move_snake();
@@ -36,9 +39,33 @@ void update_grid();
 bool check_collision(Point next);
 bool is_opposite_direction(char new_direction);
 bool play_again_prompt();
+void restore_terminal();
 
 int main()
 {
+    // Save the original terminal settings
+    if (tcgetattr(STDIN_FILENO, &original_tio) == -1)
+    {
+        perror("Failed to get terminal attributes");
+        exit(EXIT_FAILURE);
+    }
+
+    // Set the terminal to non-canonical mode and disable echo
+    struct termios new_tio = original_tio;
+    new_tio.c_lflag &= ~(ICANON | ECHO);
+    if (tcsetattr(STDIN_FILENO, TCSANOW, &new_tio) == -1)
+    {
+        perror("Failed to set terminal attributes");
+        exit(EXIT_FAILURE);
+    }
+
+    // Register restore_terminal with atexit
+    if (atexit(restore_terminal) != 0)
+    {
+        fprintf(stderr, "Failed to register restore_terminal with atexit\n");
+        exit(EXIT_FAILURE);
+    }
+
     signal(SIGUSR1, handle_signal);
     signal(SIGINT, handle_signal);
     signal(SIGTERM, handle_signal);
@@ -101,6 +128,16 @@ int main()
     printf("\nExiting the game...\n");
     return 0;
 }
+
+void restore_terminal()
+{
+    // Restore the original terminal settings
+    if (tcsetattr(STDIN_FILENO, TCSANOW, &original_tio) == -1)
+    {
+        perror("Failed to restore terminal attributes");
+    }
+}
+
 void initialize_grid()
 {
     grid = (char **)malloc(ROWS * sizeof(char *));
@@ -219,6 +256,10 @@ void handle_signal(int signal)
     if (signal == SIGUSR1 || signal == SIGINT || signal == SIGTERM)
     {
         running = false;
+        cleanup();
+        restore_terminal(); // Restore terminal settings
+        printf("\nGame received signal %d. Returning to main menu...\n", signal);
+        exit(2);
     }
 }
 
@@ -229,33 +270,14 @@ void cleanup()
         free(grid[i]);
     }
     free(grid);
+    restore_terminal(); // Ensure terminal is restored
 }
 int kbhit()
 {
-    struct termios oldt, newt;
-    int ch, oldf;
-
-    tcgetattr(STDIN_FILENO, &oldt);
-    newt = oldt;
-    newt.c_lflag &= ~(ICANON | ECHO);
-    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
-    oldf = fcntl(STDIN_FILENO, F_GETFL, 0);
-    fcntl(STDIN_FILENO, F_SETFL, oldf | O_NONBLOCK);
-
-    ch = getchar();
-
-    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-    fcntl(STDIN_FILENO, F_SETFL, oldf);
-
-    if (ch != EOF)
-    {
-        ungetc(ch, stdin);
-        return 1;
-    }
-
-    return 0;
+    int bytesWaiting;
+    ioctl(STDIN_FILENO, FIONREAD, &bytesWaiting);
+    return bytesWaiting > 0;
 }
-
 bool is_opposite_direction(char new_direction)
 {
     if (new_direction == last_direction)
