@@ -7,16 +7,16 @@
 #define ROWS 15
 #define COLS 15
 
-struct termios term;
-
 void enable_raw_mode()
 {
+    struct termios term;
     tcgetattr(0, &term);
     term.c_lflag &= ~(ICANON | ECHO);
     tcsetattr(0, TCSANOW, &term);
 }
 void disable_raw_mode()
 {
+    struct termios term;
     tcgetattr(0, &term);
     term.c_lflag |= (ICANON | ECHO);
     tcsetattr(0, TCSANOW, &term);
@@ -109,7 +109,6 @@ int main()
     time_t start_time, end_time;
     enable_raw_mode();
     atexit(disable_raw_mode);
-
     do
     {
         initialize_maze(maze, &player_x, &player_y);
