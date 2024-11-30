@@ -42,7 +42,8 @@ int main()
     sigaction(SIGINT, &sa, NULL);
     sigaction(SIGTERM, &sa, NULL);
     sa.sa_handler = handle_child_exit;
-    sigaction(SIGCHLD, &sa, NULL);
+    sigaction(SIGQUIT, &sa, NULL); // Handle Quit signal (Ctrl+\)
+    sigaction(SIGABRT, &sa, NULL); // Handle Abort signal
     configure_terminal();
     log_event("program started", getpid());
 
@@ -116,6 +117,8 @@ int main()
 
     terminate_all_children();
     restore_terminal();
+    safe_exit(); // Ensure cleanup at program exit
+
     return 0;
 }
 
@@ -199,18 +202,19 @@ void display_main_screen()
         }
     }
 }
-void handle_signal(int sig)
-{
-    printf("\nReceived signal %d. Exiting gracefully...\n", sig);
-    exit_flag = true;
-    terminate_all_children();
-    restore_terminal();
-    exit(0);
-}
 void safe_exit()
 {
     restore_terminal();
     terminate_all_children();
+    log_event("program exiting", getpid());
+}
+
+void handle_signal(int sig)
+{
+    printf("\nReceived signal %d. Exiting gracefully...\n", sig);
+    exit_flag = true;
+    safe_exit(); // Ensure terminal settings and child processes are handled.
+    exit(0);
 }
 
 void configure_terminal()
@@ -220,13 +224,15 @@ void configure_terminal()
         perror("Failed to get terminal attributes");
         exit(EXIT_FAILURE);
     }
+
     struct termios new_tio = original_tio;
-    new_tio.c_lflag &= ~(ICANON | ECHO);
+    new_tio.c_lflag &= ~(ICANON | ECHO); // Disable canonical mode and echo
     if (tcsetattr(STDIN_FILENO, TCSANOW, &new_tio) == -1)
     {
         perror("Failed to set terminal attributes");
         exit(EXIT_FAILURE);
     }
+
     if (atexit(safe_exit) != 0)
     {
         fprintf(stderr, "Failed to register safe_exit with atexit: %s\n", strerror(errno));
