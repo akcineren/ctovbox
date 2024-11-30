@@ -18,15 +18,19 @@ int tank_y = COLS / 2;
 int score = 0;
 int running = 1;
 
+struct termios oldt, newt;
+
 void handle_exit(int signal)
 {
     if (signal == SIGINT || signal == SIGTERM)
     {
         running = 0;
+        restore_terminal_settings(); // Restore terminal settings
         printf("\nGame received signal %d. Exiting gracefully...\n", signal);
         exit(2);
     }
 }
+
 void initialize_grid()
 {
     for (int i = 0; i < ROWS; i++)
@@ -152,15 +156,7 @@ void shoot_bullet()
 
 char get_input()
 {
-    struct termios oldt, newt;
-    char ch;
-    tcgetattr(STDIN_FILENO, &oldt);
-    newt = oldt;
-    newt.c_lflag &= ~(ICANON | ECHO);
-    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
-    ch = getchar();
-    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-    return ch;
+    return getchar();
 }
 
 void game_loop()
@@ -194,6 +190,12 @@ void game_loop()
         usleep(200000);
     }
 }
+
+void restore_terminal_settings()
+{
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt); // Restore old settings
+}
+
 int main()
 {
     signal(SIGUSR1, handle_exit);
@@ -201,6 +203,15 @@ int main()
     signal(SIGTERM, handle_exit);
     srand(time(NULL));
     initialize_grid();
+
+    // Set terminal to non-canonical mode
+    tcgetattr(STDIN_FILENO, &oldt); // Save old settings
+    newt = oldt;
+    newt.c_lflag &= ~(ICANON | ECHO);        // Disable canonical mode and echo
+    tcsetattr(STDIN_FILENO, TCSANOW, &newt); // Apply new settings
+
+    atexit(restore_terminal_settings); // Ensure settings are restored on exit
+
     game_loop();
     return 0;
 }
