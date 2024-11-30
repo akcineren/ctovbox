@@ -19,7 +19,8 @@ void enable_raw_mode()
 }
 void disable_raw_mode()
 {
-    tcsetattr(0, TCSANOW, &original_termios);
+    original_termios.c_lflag |= (ICANON | ECHO);
+    tcsetattr(0, TCSANOW, &original_termios); // Restore original terminal settings
 }
 
 void initialize_maze(char maze[ROWS][COLS], int *player_x, int *player_y)
