@@ -43,9 +43,6 @@ int main()
     sigaction(SIGTERM, &sa, NULL);
     sa.sa_handler = handle_child_exit;
     sigaction(SIGCHLD, &sa, NULL);
-    atexit(restore_terminal);
-    atexit(terminate_all_children);
-
     configure_terminal();
     log_event("program started", getpid());
 
@@ -205,9 +202,9 @@ void display_main_screen()
 void handle_signal(int sig)
 {
     printf("\nReceived signal %d. Exiting gracefully...\n", sig);
-    restore_terminal();
+    exit_flag = true;
     terminate_all_children();
-    exit(sig);
+    restore_terminal();
 }
 
 void safe_exit()

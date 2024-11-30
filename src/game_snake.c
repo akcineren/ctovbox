@@ -219,9 +219,6 @@ void handle_signal(int signal)
     if (signal == SIGUSR1 || signal == SIGINT || signal == SIGTERM)
     {
         running = false;
-        cleanup();
-        printf("\nGame received signal %d. Returning to main menu...\n", signal);
-        exit(2);
     }
 }
 
