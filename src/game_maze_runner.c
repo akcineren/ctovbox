@@ -108,6 +108,7 @@ int main()
     int win = 0;
     time_t start_time, end_time;
     enable_raw_mode();
+    atexit(disable_raw_mode);
 
     do
     {
