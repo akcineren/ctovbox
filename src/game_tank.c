@@ -19,6 +19,7 @@ int score = 0;
 int running = 1;
 
 struct termios oldt, newt;
+void restore_terminal_settings();
 
 void handle_exit(int signal)
 {
