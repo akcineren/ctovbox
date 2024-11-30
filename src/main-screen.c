@@ -9,6 +9,7 @@
 #include <stdbool.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <errno.h>
 
 #define MAX_GAMES 100
 #define MAX_CHILDREN 100
@@ -27,6 +28,7 @@ void handle_signal(int sig);
 void handle_child_exit(int sig);
 void configure_terminal();
 void restore_terminal();
+void safe_exit();
 void terminate_all_children();
 void register_child(pid_t pid);
 void log_event(const char *message, pid_t pid);
@@ -205,17 +207,39 @@ void handle_signal(int sig)
     restore_terminal();
     exit(0);
 }
+void safe_exit()
+{
+    restore_terminal();
+    terminate_all_children();
+}
+
 void configure_terminal()
 {
-    struct termios new_tio;
-    tcgetattr(STDIN_FILENO, &original_tio);
-    new_tio = original_tio;
+    if (tcgetattr(STDIN_FILENO, &original_tio) == -1)
+    {
+        perror("Failed to get terminal attributes");
+        exit(EXIT_FAILURE);
+    }
+    struct termios new_tio = original_tio;
     new_tio.c_lflag &= ~(ICANON | ECHO);
-    tcsetattr(STDIN_FILENO, TCSANOW, &new_tio);
+    if (tcsetattr(STDIN_FILENO, TCSANOW, &new_tio) == -1)
+    {
+        perror("Failed to set terminal attributes");
+        exit(EXIT_FAILURE);
+    }
+    if (atexit(safe_exit) != 0)
+    {
+        fprintf(stderr, "Failed to register safe_exit with atexit: %s\n", strerror(errno));
+        exit(EXIT_FAILURE);
+    }
 }
+
 void restore_terminal()
 {
-    tcsetattr(STDIN_FILENO, TCSANOW, &original_tio);
+    if (tcsetattr(STDIN_FILENO, TCSANOW, &original_tio) == -1)
+    {
+        perror("Failed to restore terminal attributes");
+    }
 }
 
 void terminate_all_children()
