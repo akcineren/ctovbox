@@ -12,29 +12,21 @@
 #define TANK 'T'
 #define BULLET '|'
 #define ENEMY 'E'
-
 char grid[ROWS][COLS];
 int tank_x = ROWS - 2;
 int tank_y = COLS / 2;
 int score = 0;
 int running = 1;
 
-struct termios original_termios;
-
-void restore_terminal_settings()
-{
-    tcsetattr(STDIN_FILENO, TCSANOW, &original_termios);
-    printf("\nTerminal settings restored. Exiting...\n");
-}
-
 void handle_exit(int signal)
 {
-    running = 0;
-    printf("\nGame received signal %d. Exiting gracefully...\n", signal);
-    restore_terminal_settings();
-    exit(2);
+    if (signal == SIGINT || signal == SIGTERM)
+    {
+        running = 0;
+        printf("\nGame received signal %d. Exiting gracefully...\n", signal);
+        exit(2);
+    }
 }
-
 void initialize_grid()
 {
     for (int i = 0; i < ROWS; i++)
@@ -46,7 +38,6 @@ void initialize_grid()
     }
     grid[tank_x][tank_y] = TANK;
 }
-
 void display_grid()
 {
     system("clear");
@@ -61,7 +52,6 @@ void display_grid()
     printf("\nScore: %d\n", score);
     printf("Controls: w/a/s/d to move, space to shoot, q to quit.\n");
 }
-
 void spawn_enemy()
 {
     int x = rand() % (ROWS / 2);
@@ -97,7 +87,6 @@ void move_bullets()
         }
     }
 }
-
 void move_enemies()
 {
     for (int i = ROWS - 1; i >= 0; i--)
@@ -128,7 +117,6 @@ void move_enemies()
         }
     }
 }
-
 void move_tank(char direction)
 {
     int new_x = tank_x;
@@ -154,7 +142,6 @@ void move_tank(char direction)
     tank_y = new_y;
     grid[tank_x][tank_y] = TANK;
 }
-
 void shoot_bullet()
 {
     if (tank_x > 0 && grid[tank_x - 1][tank_y] == EMPTY)
@@ -165,18 +152,14 @@ void shoot_bullet()
 
 char get_input()
 {
-    struct termios newt;
+    struct termios oldt, newt;
     char ch;
-
-    tcgetattr(STDIN_FILENO, &original_termios); // Save original settings
-    atexit(restore_terminal_settings);          // Register cleanup function
-
-    newt = original_termios;
+    tcgetattr(STDIN_FILENO, &oldt);
+    newt = oldt;
     newt.c_lflag &= ~(ICANON | ECHO);
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
-
     ch = getchar();
-
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
     return ch;
 }
 
@@ -211,7 +194,6 @@ void game_loop()
         usleep(200000);
     }
 }
-
 int main()
 {
     signal(SIGUSR1, handle_exit);
