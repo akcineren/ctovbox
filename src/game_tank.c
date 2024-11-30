@@ -4,7 +4,7 @@
 #include <unistd.h>
 #include <termios.h>
 #include <signal.h>
-#include <time.h> // Add this header for the time function
+#include <time.h>
 
 #define ROWS 15
 #define COLS 20
@@ -12,8 +12,6 @@
 #define TANK 'T'
 #define BULLET '|'
 #define ENEMY 'E'
-
-// Game elements
 char grid[ROWS][COLS];
 int tank_x = ROWS - 2;
 int tank_y = COLS / 2;
@@ -24,13 +22,11 @@ void handle_exit(int signal)
 {
     if (signal == SIGINT || signal == SIGTERM)
     {
-        running = 0; // Stop the game loop
+        running = 0;
         printf("\nGame received signal %d. Exiting gracefully...\n", signal);
-        exit(2); // Exit with a specific code for signal termination
+        exit(2);
     }
 }
-
-// Initialize the game grid
 void initialize_grid()
 {
     for (int i = 0; i < ROWS; i++)
@@ -42,8 +38,6 @@ void initialize_grid()
     }
     grid[tank_x][tank_y] = TANK;
 }
-
-// Display the game grid
 void display_grid()
 {
     system("clear");
@@ -58,8 +52,6 @@ void display_grid()
     printf("\nScore: %d\n", score);
     printf("Controls: w/a/s/d to move, space to shoot, q to quit.\n");
 }
-
-// Spawn an enemy at a random position
 void spawn_enemy()
 {
     int x = rand() % (ROWS / 2);
@@ -78,21 +70,16 @@ void move_bullets()
         {
             if (grid[i][j] == BULLET)
             {
-                // Clear the current bullet position
                 grid[i][j] = EMPTY;
-
-                // Check if the bullet is still in bounds
                 if (i > 0)
                 {
                     if (grid[i - 1][j] == ENEMY)
                     {
-                        // Bullet hits an enemy
                         grid[i - 1][j] = EMPTY;
                         score++;
                     }
                     else if (grid[i - 1][j] == EMPTY)
                     {
-                        // Move bullet to the next position
                         grid[i - 1][j] = BULLET;
                     }
                 }
@@ -100,8 +87,6 @@ void move_bullets()
         }
     }
 }
-
-// Move enemies downward
 void move_enemies()
 {
     for (int i = ROWS - 1; i >= 0; i--)
@@ -132,7 +117,6 @@ void move_enemies()
         }
     }
 }
-// Handle tank movement
 void move_tank(char direction)
 {
     int new_x = tank_x;
@@ -147,22 +131,17 @@ void move_tank(char direction)
     if (direction == 'd' && tank_y < COLS - 1)
         new_y++;
 
-    // Check if the target cell contains an enemy
     if (grid[new_x][new_y] == ENEMY)
     {
         printf("\nGame Over! Final Score: %d\n", score);
         running = 0;
-        return; // Exit the function to prevent further updates
+        return;
     }
-
-    // Update the tank's position
     grid[tank_x][tank_y] = EMPTY;
     tank_x = new_x;
     tank_y = new_y;
     grid[tank_x][tank_y] = TANK;
 }
-
-// Shoot a bullet
 void shoot_bullet()
 {
     if (tank_x > 0 && grid[tank_x - 1][tank_y] == EMPTY)
@@ -171,7 +150,6 @@ void shoot_bullet()
     }
 }
 
-// Read user input without pressing enter
 char get_input()
 {
     struct termios oldt, newt;
@@ -210,23 +188,19 @@ void game_loop()
         }
         else
         {
-            // Ignore invalid inputs
             continue;
         }
 
-        usleep(200000); // Game speed
+        usleep(200000);
     }
 }
-
 int main()
 {
     signal(SIGUSR1, handle_exit);
     signal(SIGINT, handle_exit);
     signal(SIGTERM, handle_exit);
-
     srand(time(NULL));
     initialize_grid();
     game_loop();
-
     return 0;
 }

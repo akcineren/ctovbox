@@ -7,25 +7,21 @@
 #define ROWS 15
 #define COLS 15
 
-// Function to enable raw mode for instant keypress
 void enable_raw_mode()
 {
     struct termios term;
-    tcgetattr(0, &term);              // Get current terminal attributes
-    term.c_lflag &= ~(ICANON | ECHO); // Disable canonical mode and echo
-    tcsetattr(0, TCSANOW, &term);     // Apply changes
+    tcgetattr(0, &term);
+    term.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(0, TCSANOW, &term);
 }
-
-// Function to disable raw mode
 void disable_raw_mode()
 {
     struct termios term;
-    tcgetattr(0, &term);             // Get current terminal attributes
-    term.c_lflag |= (ICANON | ECHO); // Re-enable canonical mode and echo
-    tcsetattr(0, TCSANOW, &term);    // Apply changes
+    tcgetattr(0, &term);
+    term.c_lflag |= (ICANON | ECHO);
+    tcsetattr(0, TCSANOW, &term);
 }
 
-// Function to initialize the maze
 void initialize_maze(char maze[ROWS][COLS], int *player_x, int *player_y)
 {
     srand(time(0));
@@ -37,16 +33,12 @@ void initialize_maze(char maze[ROWS][COLS], int *player_x, int *player_y)
         }
     }
 
-    // Place the player at the starting position
     *player_x = 1;
     *player_y = 1;
     maze[*player_x][*player_y] = 'P';
-
-    // Place the exit point
     maze[ROWS - 2][COLS - 2] = 'E';
 }
 
-// Function to display the maze
 void display_maze(char maze[ROWS][COLS])
 {
     system("clear");
@@ -60,7 +52,6 @@ void display_maze(char maze[ROWS][COLS])
     }
 }
 
-// Function to move the player
 int move_player(char maze[ROWS][COLS], int *player_x, int *player_y, char move)
 {
     int new_x = *player_x;
@@ -75,23 +66,21 @@ int move_player(char maze[ROWS][COLS], int *player_x, int *player_y, char move)
     else if (move == 'd')
         new_y++;
 
-    // Check boundaries and walls
     if (new_x >= 0 && new_x < ROWS && new_y >= 0 && new_y < COLS && maze[new_x][new_y] != '#')
     {
-        maze[*player_x][*player_y] = '.'; // Reset old position
+        maze[*player_x][*player_y] = '.';
         *player_x = new_x;
         *player_y = new_y;
 
         if (maze[*player_x][*player_y] == 'E')
-            return 1; // Player reached the exit
+            return 1;
 
-        maze[*player_x][*player_y] = 'P'; // Update to new position
+        maze[*player_x][*player_y] = 'P';
     }
 
     return 0;
 }
 
-// Function to handle the play again prompt
 int play_again()
 {
     char input;
@@ -101,8 +90,8 @@ int play_again()
         input = getchar();
         if (input == 'q')
         {
-            printf("\nExiting the game gracefully. Goodbye!\n");
-            exit(0); // Global exit on 'q'
+            printf("\nExiting the game gracefully.\n");
+            exit(0);
         }
         if (input == 'a')
             return 1;
@@ -118,8 +107,6 @@ int main()
     char input;
     int win = 0;
     time_t start_time, end_time;
-
-    // Enable raw mode for instant key capture
     enable_raw_mode();
 
     do
@@ -128,8 +115,6 @@ int main()
         win = 0;
 
         printf("\nControls: Use 'w', 'a', 's', 'd' to move. Press 'q' to quit.\n");
-
-        // Record the start time
         time(&start_time);
 
         while (!win)
@@ -137,19 +122,18 @@ int main()
             display_maze(maze);
             printf("\nEnter your move: ");
 
-            input = getchar(); // Capture input instantly
+            input = getchar();
 
             if (input == 'q')
             {
                 printf("\nExiting the game gracefully. Goodbye!\n");
-                disable_raw_mode(); // Restore terminal settings before exiting
+                disable_raw_mode();
                 exit(0);
             }
 
             win = move_player(maze, &player_x, &player_y, input);
             if (win)
             {
-                // Record the end time
                 time(&end_time);
 
                 display_maze(maze);
@@ -158,8 +142,6 @@ int main()
             }
         }
     } while (play_again());
-
-    // Disable raw mode and restore terminal settings
     disable_raw_mode();
 
     printf("\nThanks for playing! Goodbye!\n");
